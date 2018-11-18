@@ -24,15 +24,13 @@ board.grid = ([["O", np.nan, "X"],
                ["O", np.nan, "O"],
                ["O", "X", "O"]])
 paths_data = np.array(board.grid)
-linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data,
-                                                                       1,1,False,True,"O")
+#linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data,1,1,False,True,"O")
 
 board.grid = ([["O", np.nan, "X"],
                ["O", np.nan, "O"],
                [np.nan, "X", "O"]])
 paths_data = np.array(board.grid)
-linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data,
-                                                                       1,1,False,True,"O")
+#linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data, 1,1,False,True,"O")
 
 
 #Test interaction
@@ -40,8 +38,15 @@ board.grid = ([["O", np.nan, "X"],
                ["O", np.nan, "O"],
                [np.nan, "X", "O"]])
 paths_data = np.array(board.grid)
-linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data,
-                                                                       1,1,False,True,"O")
+#linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data, 1,1,False,True,"O")
 
+#Test blocking
+board.grid = ([["O", "X", "X"],
+               ["X", np.nan, "O"],
+               [np.nan, "X", "O"]])
+paths_data = np.array(board.grid)
+linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data,
+                                                                       1,1,True,False,"X")
+### Why is the interaction score zero?
 print("Done")
 
