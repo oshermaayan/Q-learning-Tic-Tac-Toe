@@ -179,7 +179,7 @@ class Board:
 
     @staticmethod
     def mark2num(mark):         # Convert's a player's mark to a number to be inserted in the Numpy array representing the board. The mark must be either "X" or "O".
-        d = {"X": 1, "O": 0}
+        d = {"X": 1, "O": 0, np.nan: np.nan}
         return d[mark]
 
     def available_moves(self):
@@ -222,14 +222,15 @@ class FeatureExtractor:
 
 
     '''Input: board is the current board state from which we extract features'''
-    def extractFeatures(self, board, player = "X"):
+    def extractFeatures(self, board:Board, player="X"):
         N = board.board_size
         board_mat = board.grid
 
         board_matrix = copy.deepcopy(board_mat)
         #self.convert_matrix_xo(board_matrix) ### Osher - we may need some conversion
         # compute path scores
-        score_matrix = copy.deepcopy(board_matrix)
+        score_matrix = [[{} for x in range(N)] for y in range(N)]
+        score_matrix = np.array(score_matrix)
 
         paths_data = copy.deepcopy(board_matrix)
         x_turn = True
@@ -242,11 +243,12 @@ class FeatureExtractor:
         ''' Calculate features for each square in the board'''
         for r in range(N):
             for c in range(N):
-                if np.isnan(board_matrix[r][c]):  # calculate features only for empty squares
+                square_val = board.mark2num(board_matrix[r][c])
+                if np.isnan(square_val):  # calculate features only for empty squares
                     square_features_scores = self.get_new_square_feat_dict()
-                    density_score = self.densityFeature(board_matrix, r, c)
+                    density_score = self.densityFeature(board_matrix, r, c, N)
                     square_features_scores["density"] = density_score
-                    linear, nonlinear, interaction, blocking = self.calcNotDensityFeats(board_matrix, paths_data,
+                    linear, nonlinear, interaction, blocking = self.calcNotDensityFeats(board, paths_data,
                                                                                         r, c, x_turn, o_turn)
                     square_features_scores["linear"] = linear
                     square_features_scores["nonlinear"] = nonlinear
@@ -254,6 +256,9 @@ class FeatureExtractor:
                     square_features_scores["blocking"] = blocking
                     #update score_matrix
                     score_matrix[r][c] = square_features_scores
+                else:
+                    #square already has a value
+                    score_matrix[r][c] = {"key":"square_is_taken"}
         '''
          # check for immediate win/loss
     winning_moves = check_immediate_win(board_matrix, player, board_obj=board_obj)
@@ -288,13 +293,11 @@ class FeatureExtractor:
         '''
         return score_matrix
 
-    def densityFeature(self, board, row, col):
-        N = board.board_size
+    def densityFeature(self, board_mat:np.array, row, col, N):
         if (row<0 | row>N | col<0 | col>N):
             raise("Row or column index is out of range")
 
-        board_mat = np.array(board.grid)
-
+        board_mat = np.array(copy.deepcopy(board_mat))
         #score_board = np.zeros([N][N])  # score board stores density scores for each square
         density_adjacentSquare_score = 1/8
         density_radiusSquare_score = 1/16
@@ -309,7 +312,7 @@ class FeatureExtractor:
         # Make sure indices are within range
         row_index_begin = max(row - 1, 0)
         col_index_begin = max(col - 1, 0)
-        row_index_end = min(row + 2, N) # Slices indices are EXclusive, so we use N (instead of N-1) as upper limit
+        row_index_end = min(row + 2, N) # Slices indices are Exclusive, so we use N (instead of N-1) as upper limit
         col_index_end = min(col + 2, N)
 
         # First, calculate the score of adjacent squares
@@ -334,22 +337,22 @@ class FeatureExtractor:
 
         return square_density_score
 
-    def calcNotDensityFeats(self, board, paths_data, r, c, x_turn, o_turn, player = "X"):
+    def calcNotDensityFeats(self, board:Board, paths_data:list, r, c, x_turn, o_turn, player = "X"):
         streak_size = board.streak_size
         board_matrix = copy.deepcopy(board.grid)
         o_weight = self.o_weight
         paths_data = copy.deepcopy(board_matrix)
 
         # Calculate open paths for X (human) player
-        l_nl_inter_feat_scores_x, open_paths_data_x , max_path_x = \
+        (all_x_features_but_blocking, open_paths_data_x, max_path_x) = \
                                     self.compute_open_paths_data_interaction(r, c, board_matrix, streak_size,
                                                                              player_turn=x_turn)
         #x_paths = self.compute_open_paths_data_interaction(r, c, board_matrix, player_turn=x_turn, exp=exp)
 
        #Extract feature scores from l_nl_inter_feat_scores_x
-        linear_score = l_nl_inter_feat_scores_x["linear"]
-        nonlinear_score = l_nl_inter_feat_scores_x["nonlinear"]
-        interaction_score = l_nl_inter_feat_scores_x["interaction"]
+        linear_score = all_x_features_but_blocking["linear"]
+        nonlinear_score = all_x_features_but_blocking["nonlinear"]
+        interaction_score = all_x_features_but_blocking["interaction"]
 
         # Calculate blocking scores
         blocking_score_x = 0.0
@@ -360,19 +363,26 @@ class FeatureExtractor:
         paths_data[r][c] = copy.deepcopy(x_paths_data)
 
        # Calculate open paths for O (opponent) player
-        (l_nl_inter_feat_scores_o, open_paths_data_o, max_path_o) = \
+        (all_o_features_but_blocking, open_paths_data_o, max_path_o) = \
                             self.compute_open_paths_data_interaction(r, c, board_matrix, streak_size,
                                                                      player='O', player_turn=o_turn)
        #o_paths = self.compute_open_paths_data_interaction(r, c, board_matrix, player='O', player_turn=o_turn)
         blocking_score_o = 0.0
 
+
         # Calculate blocking score
-        if (max_path_x == (streak_size - 1)) & x_turn:  # give score for blocking O
+        if (max_path_x == streak_size) & x_turn:
+            # Winning move for X
+            blocking_score_x = WIN_SCORE
+        elif (max_path_o == streak_size) & o_turn:
+            blocking_score_o = WIN_SCORE
+        elif (max_path_x == (streak_size - 1)) & x_turn:  # give score for blocking O
             # square_score_o = INFINITY_O
             blocking_score_x += INFINITY_O
         elif (max_path_o == (streak_size - 1)) & o_turn:  # give score for blocking X
            # square_score_x = INFINITY_O
             blocking_score_o += INFINITY_O
+
         if o_weight == 0.5:
             blocking_score = blocking_score_x + blocking_score_o
            # if x_turn:
@@ -390,7 +400,8 @@ class FeatureExtractor:
         return linear_score, nonlinear_score, interaction_score, blocking_score
 
 
-    def compute_open_paths_data_interaction(self, row, col, board_mat, streak_size, player='X',player_turn=True):
+    def compute_open_paths_data_interaction(self, row:int, col:int, board_mat:np.array,
+                                            streak_size:int, player='X',player_turn=True):
         '''
         :param self:
         :param row:
@@ -414,7 +425,6 @@ class FeatureExtractor:
         threshold = 0
 
         open_paths_data = []  # this list will hold information on all the potential paths, each path will be represented by a pair (length and empty squares, which will be used to check overlap)
-        paths = []
 
         # check right-down diagonal (there is a more efficient way to look at all the paths, but it was easier for me to debug when separating them :)
         for i in range(streak_size):
@@ -565,13 +575,15 @@ class FeatureExtractor:
 
 
         # compute the linear, nonlinear and interactions scores for the cell based on the potential paths
-        #[linear_score, nonlinear_score,interaction_score] = [0.0]*3
+
         for i in range(len(open_paths_data)):
             p1 = open_paths_data[i]
             if streak_size == p1[0]:
                 # current player has one - update all of the features scores
                 for feature in tmp_score_dict:
-                    tmp_score_dict[feature] += WIN_SCORE
+                    tmp_score_dict[feature] = WIN_SCORE ### Check with Ofra
+                winning_move = True
+                break # Highest score achieved
             else:
                 tmp_score_dict["linear"] += p1[0]
                 tmp_score_dict["nonlinear"] += 1.0 / math.pow((streak_size - p1[0]), exp)  # score for individual path
@@ -585,8 +597,9 @@ class FeatureExtractor:
                             numenator = 0.0 + p1[0] * p2[0]
                             denom = ((streak_size - 1) * (streak_size - 1)) - (p1[0] * p2[0])
                             if denom == 0:
-                                # current player wins - we already updated all features scores in this case
-                                continue
+                                # current player wins - O can't block both threats
+                                #  - we already updated all features scores in this case
+                                tmp_score_dict["interaction"] = WIN_SCORE
                             else:
                                 tmp_score_dict["interaction"] += math.pow(numenator / denom, exp)
 
