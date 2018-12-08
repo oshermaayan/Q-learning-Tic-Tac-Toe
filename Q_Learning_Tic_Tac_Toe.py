@@ -159,16 +159,17 @@ class Board:
         self.streak_size = streak_size
 
     def winner(self):
-        rows = [self.grid[i,:] for i in range(3)]
-        cols = [self.grid[:,j] for j in range(3)]
-        diag = [np.array([self.grid[i,i] for i in range(3)])]
-        cross_diag = [np.array([self.grid[2-i,i] for i in range(3)])]
+        #rows = [self.grid[i,:] for i in range(3)]
+        #cols = [self.grid[:,j] for j in range(3)]
+        #diag = [np.array([self.grid[i,i] for i in range(3)])]
+        #cross_diag = [np.array([self.grid[2-i,i] for i in range(3)])]
+        rows, cols, diag, cross_diag = self.get_rows_cols_streaks()
         lanes = np.concatenate((rows, cols, diag, cross_diag))      # A "lane" is defined as a row, column, diagonal, or cross-diagonal
 
         any_lane = lambda x: any([np.array_equal(lane, x) for lane in lanes])   # Returns true if any lane is equal to the input argument "x"
-        if any_lane(np.ones(3)):
+        if any_lane(np.ones(self.streak_size)):
             return "X"
-        elif any_lane(np.zeros(3)):
+        elif any_lane(np.zeros(self.streak_size)):
             return "O"
 
     def get_rows_cols_streaks(self):
