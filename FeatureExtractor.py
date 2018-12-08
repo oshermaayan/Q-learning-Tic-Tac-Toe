@@ -1,7 +1,9 @@
 import pickle as pickle    # cPickle is for Python 2.x only; in Python 3, simply "import pickle" and the accelerated version will be used automatically if available
+import numpy as np
 import math
 from numpy.core.multiarray import ndarray
-
+import copy
+from Q_Learning_Tic_Tac_Toe import Board
 
 class FeatureExtractor:
     def __init__(self, density_radius=2, exp=1, o_weight=0.5):

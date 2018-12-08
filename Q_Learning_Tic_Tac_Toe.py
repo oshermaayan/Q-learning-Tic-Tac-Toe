@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 import tkinter as tk
 import copy
-from FeatureExtractor import *
+#from FeatureExtractor import *
 import pickle as pickle    # cPickle is for Python 2.x only; in Python 3, simply "import pickle" and the accelerated version will be used automatically if available
 import math
 from numpy.core.multiarray import ndarray
