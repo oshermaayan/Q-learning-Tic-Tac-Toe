@@ -8,11 +8,9 @@ import pickle as pickle    # cPickle is for Python 2.x only; in Python 3, simply
 import math
 from numpy.core.multiarray import ndarray
 
-WIN_SCORE = 10
-INFINITY_O = 100
-INFINITY_X = 100
+
 class Game:
-    def __init__(self, master, player1, player2, Q_learn=None, Q={}, alpha=0.3, gamma=0.9):
+    def __init__(self, master, player1, player2, Q_learn=None, Q={}, alpha=0.3, gamma=0.9, board_size=3, streak_size=3):
         frame = tk.Frame()
         frame.grid()
         self.master = master
@@ -23,16 +21,18 @@ class Game:
         self.current_player = player1
         self.other_player = player2
         self.empty_text = ""
-        self.board = Board(board_size = 3, streak_size = 3)
+        self.board_size = board_size
+        self.streak_size = streak_size
+        self.board = Board(board_size=board_size, streak_size=streak_size)
 
-        self.buttons = [[None for _ in range(3)] for _ in range(3)]
+        self.buttons = [[None for _ in range(board_size)] for _ in range(board_size)]
         for i in range(3):
             for j in range(3):
-                self.buttons[i][j] = tk.Button(frame, height=3, width=3, text=self.empty_text, command=lambda i=i, j=j: self.callback(self.buttons[i][j]))
+                self.buttons[i][j] = tk.Button(frame, height=board_size, width=board_size, text=self.empty_text, command=lambda i=i, j=j: self.callback(self.buttons[i][j]))
                 self.buttons[i][j].grid(row=i, column=j)
 
         self.reset_button = tk.Button(text="Reset", command=self.reset)
-        self.reset_button.grid(row=3)
+        self.reset_button.grid(row=board_size)
 
         self.Q_learn = Q_learn
         if self.Q_learn:
@@ -102,10 +102,10 @@ class Game:
 
     def reset(self):
         print("Resetting...")
-        for i in range(3):
-            for j in range(3):
+        for i in range(self.board_size):
+            for j in range(self.board_size):
                 self.buttons[i][j].configure(text=self.empty_text)
-        self.board = Board(grid=np.ones((3,3))*np.nan)
+        self.board = Board(grid=np.ones((self.board_size,self.board_size))*np.nan)
         self.current_player = self.player1
         self.other_player = self.player2
         # np.random.seed(seed=0)      # Set the random seed to zero to see the Q-learning 'in action' or for debugging purposes
@@ -125,7 +125,7 @@ class Game:
         elif isinstance(self.player1, HumanPlayer) and isinstance(self.player2, ComputerPlayer):
             pass
         elif isinstance(self.player1, ComputerPlayer) and isinstance(self.player2, HumanPlayer):
-            first_computer_move = player1.get_move(self.board)      # If player 1 is a computer, it needs to be triggered to make the first move.
+            first_computer_move = self.player1.get_move(self.board)      # If player 1 is a computer, it needs to be triggered to make the first move.
             self.handle_move(first_computer_move)
         elif isinstance(self.player1, ComputerPlayer) and isinstance(self.player2, ComputerPlayer):
             while not self.board.over():        # Make the two computer players play against each other without button presses
@@ -153,19 +153,15 @@ class Game:
 
 
 class Board:
-    def __init__(self, board_size = 3, streak_size =3):
+    def __init__(self, board_size=3, streak_size=3):
+        assert board_size>=streak_size
         self.board_size = board_size
         self.grid = np.ones((board_size, board_size)) * np.nan
         self.streak_size = streak_size
 
     def winner(self):
-        #rows = [self.grid[i,:] for i in range(3)]
-        #cols = [self.grid[:,j] for j in range(3)]
-        #diag = [np.array([self.grid[i,i] for i in range(3)])]
-        #cross_diag = [np.array([self.grid[2-i,i] for i in range(3)])]
         rows, cols, diag, cross_diag = self.get_rows_cols_streaks()
         lanes = np.concatenate((rows, cols, diag, cross_diag))      # A "lane" is defined as a row, column, diagonal, or cross-diagonal
-
         any_lane = lambda x: any([np.array_equal(lane, x) for lane in lanes])   # Returns true if any lane is equal to the input argument "x"
         if any_lane(np.ones(self.streak_size)):
             return "X"

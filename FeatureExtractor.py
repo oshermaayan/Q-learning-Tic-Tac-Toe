@@ -5,6 +5,10 @@ from numpy.core.multiarray import ndarray
 import copy
 from Q_Learning_Tic_Tac_Toe import Board
 
+WIN_SCORE = 10
+INFINITY_O = 100
+INFINITY_X = 100
+
 class FeatureExtractor:
     def __init__(self, density_radius=2, exp=1, o_weight=0.5):
         """
