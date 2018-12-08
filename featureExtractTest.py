@@ -1,6 +1,7 @@
 import numpy as np
 from copy import deepcopy
-from Q_Learning_Tic_Tac_Toe import FeatureExtractor, Board
+from Q_Learning_Tic_Tac_Toe import Board
+from FeatureExtractor import import FeatureExtractor
 
 featExt = FeatureExtractor()
 board = Board()
