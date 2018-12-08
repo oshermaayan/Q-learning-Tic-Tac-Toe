@@ -7,6 +7,7 @@ board = Board()
 
 # Test: zero matrix
 board.grid.fill(0)
+'''
 #res = featExt.densityFeature(board,1,0,board.board_size)
 # Works
 
@@ -44,11 +45,26 @@ paths_data = np.array(board.grid)
 board.grid = ([["O", np.nan, np.nan],
                ["X", np.nan, "O"],
                [np.nan, "X", "O"]])
-paths_data = np.array(board.grid)
+#paths_data = np.array(board.grid)
 #linear, nonlinear, interaction, blocking = featExt.calcNotDensityFeats(board,paths_data,
 #                                                                       2,0,x_turn=True,o_turn=False,player="X")
 
-res = featExt.extractFeatures(board,player="X")
+#res = featExt.extractFeatures(board,player="X")
+'''
+
+board = Board(board_size=5)
+
+# Test: zero matrix
+board.grid = ([[1, 0, 0, 0, 1],
+               [1, 1, 1, 0 ,1],
+               [0, 0, 1, 1, 0],
+               [1, 1, 0, 0, 0],
+               [0, 0, 1, 1, 0]])
+rows,cols,diag,cross_diag = board.get_rows_cols_streaks()
+print(rows)
+print(cols)
+print(diag)
+print(cross_diag)
 
 print("Done")
 

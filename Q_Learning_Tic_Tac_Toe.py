@@ -170,6 +170,46 @@ class Board:
         elif any_lane(np.zeros(3)):
             return "O"
 
+    def get_rows_cols_streaks(self):
+        # TODO: we might need to convert values to 1,0 and np.nan
+        board_mat = np.array(copy.deepcopy(self.grid))
+        board_rows = []
+        board_cols = []
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if (j+self.streak_size<self.board_size+1):
+                    row = []
+                    for k in range(self.streak_size):
+                        row.append(board_mat[i,j+k])
+                    board_rows.append(row)
+                    #print(j+self.streak_size)
+                    #board_rows.append(board_mat[i, j:(j+self.streak_size])
+                    #board_rows.append(row)
+                if (i+self.streak_size < self.board_size+1):
+                    col = []
+                    for k in range(self.streak_size):
+                        col.append(board_mat[i + k, j])
+                    board_cols.append(col)
+
+
+        # diagonals
+        board_diag = []
+        board_cross_diag = []
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if (i + self.streak_size < self.board_size + 1) and (j + self.streak_size < self.board_size + 1):
+                    diag = []
+                    for k in range(self.streak_size):
+                        diag.append(board_mat[i+k][j+k])
+                    board_diag.append(diag)
+                if (i+self.streak_size < self.board_size+1) and (self.board_size-j-self.streak_size >= 0):
+                    cross_diag = []
+                    for k in range(self.streak_size):
+                        cross_diag.append(board_mat[i+k][self.board_size-1-j-k])
+                    board_cross_diag.append(cross_diag)
+
+        return board_rows,board_cols,board_diag,board_cross_diag
+
     def over(self):             # The game is over if there is a winner or if no squares remain empty (cat's game)
         return (not np.any(np.isnan(self.grid))) or (self.winner() is not None)
 
@@ -378,10 +418,10 @@ class FeatureExtractor:
             blocking_score_o = WIN_SCORE
         elif (max_path_x == (streak_size - 1)) & x_turn:  # give score for blocking O
             # square_score_o = INFINITY_O
-            blocking_score_x += INFINITY_O
+            blocking_score_x = 1#INFINITY_O
         elif (max_path_o == (streak_size - 1)) & o_turn:  # give score for blocking X
            # square_score_x = INFINITY_O
-            blocking_score_o += INFINITY_O
+            blocking_score_o = 1#+= INFINITY_O
 
         if o_weight == 0.5:
             blocking_score = blocking_score_x + blocking_score_o
