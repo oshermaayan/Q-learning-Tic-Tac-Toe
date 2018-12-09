@@ -4,6 +4,7 @@ import math
 from numpy.core.multiarray import ndarray
 import copy
 from Q_Learning_Tic_Tac_Toe import Board
+import util
 
 WIN_SCORE = 10
 INFINITY_O = 100
@@ -22,9 +23,11 @@ class FeatureExtractor:
 
 
     '''Input: board is the current board state from which we extract features'''
-    def extractFeatures(self, board:Board, player="X"):
+    def extractFeatures(self, board:Board, index, player="X"):
         N = board.board_size
         board_mat = board.grid
+
+        assert len(index) == 2
 
         board_matrix = copy.deepcopy(board_mat)
         #self.convert_matrix_xo(board_matrix) ### Osher - we may need some conversion
@@ -39,8 +42,23 @@ class FeatureExtractor:
             x_turn = False
             o_turn = True
 
-        active_squares = []  # Empty squares
+        row, col = index
+        square_mark = board[row][col]
+
+        square_features_scores = util.Counter() # Previous:self.get_new_square_feat_dict()
+        density_score = self.densityFeature(board_matrix, row, col, N)
+        square_features_scores["density"] = density_score
+        linear, nonlinear, interaction, blocking = self.calcNotDensityFeats(board, paths_data,
+                                                                            row, col, x_turn, o_turn)
+        square_features_scores["linear"] = linear
+        square_features_scores["nonlinear"] = nonlinear
+        square_features_scores["interaction"] = interaction
+        square_features_scores["blocking"] = blocking
+
+
+        #active_squares = []  # Empty squares
         ''' Calculate features for each square in the board'''
+        '''
         for r in range(N):
             for c in range(N):
                 square_val = board.mark2num(board_matrix[r][c])
@@ -59,39 +77,9 @@ class FeatureExtractor:
                 else:
                     #square already has a value
                     score_matrix[r][c] = {"key":"square_is_taken"}
+                return score_matrix
         '''
-         # check for immediate win/loss
-    winning_moves = check_immediate_win(board_matrix, player, board_obj=board_obj)
-    if (len(winning_moves) > 0) & ((player != 'O') | (o_weight > 0)):
-        for move in winning_moves:
-            move_row, move_col = convert_position(move, len(board_matrix))
-            score_matrix[move_row][move_col] = WIN_SCORE
 
-    if len(winning_moves) == 0:  # if can't win immediately, check if opponent can win immediately
-        other_player = 'O'
-        if player == 'O':
-            other_player = 'X'
-        winning_moves_opp = check_immediate_win(board_matrix, other_player, board_obj=board_obj)
-        if len(winning_moves_opp) > 1:
-            for row in range(len(board_matrix)):
-                for col in range(len(board_matrix[row])):
-                    if (score_matrix[row][col] != 'X') & (score_matrix[row][col] != 'O'):
-                        # update scores for losing moves, except if we are in o blindness mode
-                        if (player != 'X') | (o_weight > 0):
-                            score_matrix[row][col] = -1*WIN_SCORE
-
-        elif len(winning_moves_opp) == 1:  # give high score to blocking winning move, and losing score to rest
-            move_row, move_col = convert_position(winning_moves_opp[0], len(board_matrix))
-            for row in range(len(board_matrix)):
-                for col in range(len(board_matrix[row])):
-                    if (move_row != row) | (move_col != col):
-                        if (score_matrix[row][col] != 'X') & (score_matrix[row][col] != 'O'):
-                            if (player != 'X') | (o_weight > 0):
-                                score_matrix[row][col] = -1*WIN_SCORE
-                    else:
-                        score_matrix[row][col] = INFINITY_O
-        '''
-        return score_matrix
 
     def densityFeature(self, board_mat:np.array, row, col, N):
         if (row<0 | row>N | col<0 | col>N):

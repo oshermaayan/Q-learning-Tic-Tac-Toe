@@ -4,6 +4,7 @@ import numpy as np
 import tkinter as tk
 import copy
 #from FeatureExtractor import *
+from qlearningAgents import *
 import pickle as pickle    # cPickle is for Python 2.x only; in Python 3, simply "import pickle" and the accelerated version will be used automatically if available
 import math
 from numpy.core.multiarray import ndarray
@@ -220,8 +221,14 @@ class Board:
         d = {"X": 1, "O": 0, np.nan: np.nan}
         return d[mark]
 
+
     def available_moves(self):
         return [(i,j) for i in range(self.board_size) for j in range(self.board_size) if np.isnan(self.grid[i][j])]
+
+    @staticmethod
+    def available_moves_static(board):
+        # Returns a list of INDICES
+        return [(i, j) for i in range(board.board_size) for j in range(board.board_size) if np.isnan(board.grid[i][j])]
 
     def get_next_board(self, move, mark):
         next_board = copy.deepcopy(self)
@@ -229,6 +236,7 @@ class Board:
         return next_board
 
     def make_key(self, mark):          # For Q-learning, returns a 10-character string representing the state of the board and the player whose turn it is
+        ###Osher: this should be replaced with features!
         fill_value = 3
         filled_grid = copy.deepcopy(self.grid)
         np.place(filled_grid, np.isnan(filled_grid), fill_value)
@@ -294,10 +302,15 @@ class THandPlayer(ComputerPlayer):
 
 
 class QPlayer(ComputerPlayer):
-    def __init__(self, mark, Q={}, epsilon=0.2):
+    def __init__(self, mark, Q={}, epsilon=0.0, discount=0.9, learningRate=0.8):
         super(QPlayer, self).__init__(mark=mark)
         self.Q = Q
-        self.epsilon = epsilon
+        self.epsilon = 0.0 #epsilon
+        ### Osher: Board.available_moves() might not be a pointer to a function
+        actionFn = lambda board: board.available_moves()
+        self.agentOpts = {'actionFn': actionFn, 'epsilon': epsilon, \
+                                      'gamma': discount, 'alpha': learningRate}
+        qLearnAgent = ApproximateQAgent(exctractor=FeatureExtractor(),**self.opts)
 
     def get_move(self, board):
         if np.random.uniform() < self.epsilon:              # With probability epsilon, choose a move at random ("epsilon-greedy" exploration)

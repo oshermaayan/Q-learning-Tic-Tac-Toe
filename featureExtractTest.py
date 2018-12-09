@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
 from Q_Learning_Tic_Tac_Toe import Board
-from FeatureExtractor import import FeatureExtractor
+from FeatureExtractor import FeatureExtractor
 
 featExt = FeatureExtractor()
 board = Board()
@@ -53,19 +53,22 @@ board.grid = ([["O", np.nan, np.nan],
 #res = featExt.extractFeatures(board,player="X")
 '''
 
-board = Board(board_size=5)
+board = Board(board_size=5,streak_size=4)
 
 # Test: zero matrix
+
 board.grid = ([[1, 0, 0, 0, 1],
-               [1, 1, 1, 0 ,1],
+               [1, 0, 1, 0 ,1],
                [0, 0, 1, 1, 0],
-               [1, 1, 0, 0, 0],
-               [0, 0, 1, 1, 0]])
+               [1, 0, 0, 1, 0],
+               [0, 0, 1, 1, 1]])
+
 rows,cols,diag,cross_diag = board.get_rows_cols_streaks()
-print(rows)
+'''print(rows)
 print(cols)
 print(diag)
 print(cross_diag)
-
+'''
+print(board.winner())
 print("Done")
 
