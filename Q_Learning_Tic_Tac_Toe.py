@@ -4,7 +4,7 @@ import numpy as np
 import tkinter as tk
 import copy
 #from FeatureExtractor import *
-from qlearningAgents import *
+from myLearningAgents import *
 import pickle as pickle    # cPickle is for Python 2.x only; in Python 3, simply "import pickle" and the accelerated version will be used automatically if available
 import math
 from numpy.core.multiarray import ndarray
@@ -17,8 +17,8 @@ class Game:
         self.master = master
         master.title("Tic Tac Toe")
 
-        self.player1 = player1
-        self.player2 = player2
+        self.player1 = QPlayer(discount=gamma,learningRate=alpha) ###player
+        self.player2 = RandomPlayer() ###player2
         self.current_player = player1
         self.other_player = player2
         self.empty_text = ""
@@ -85,15 +85,16 @@ class Game:
         return move
 
     def handle_move(self, move):
-        if self.Q_learn:
-            self.learn_Q(move)
+        #if self.Q_learn:
+        #    self.learn_Q(move)
         i, j = move         # Get row and column number of the corresponding button
-        self.buttons[i][j].configure(text=self.current_player.mark)     # Change the label on the button to the current player's mark
+        #self.buttons[i][j].configure(text=self.current_player.mark)     # Change the label on the button to the current player's mark
         self.board.place_mark(move, self.current_player.mark)           # Update the board
         if self.board.over():
             self.declare_outcome()
-        else:
-            self.switch_players()
+        ### Osher : no need to switch players in our scenario, each turn includes both players
+        ###else:
+        ###    self.switch_players()
 
     def declare_outcome(self):
         if self.board.winner() is None:
@@ -121,6 +122,9 @@ class Game:
             self.other_player = self.player2
 
     def play(self):
+        while not self.board.over():
+            self.play_turn()
+        '''
         if isinstance(self.player1, HumanPlayer) and isinstance(self.player2, HumanPlayer):
             pass        # For human vs. human, play relies on the callback from button presses
         elif isinstance(self.player1, HumanPlayer) and isinstance(self.player2, ComputerPlayer):
@@ -131,11 +135,28 @@ class Game:
         elif isinstance(self.player1, ComputerPlayer) and isinstance(self.player2, ComputerPlayer):
             while not self.board.over():        # Make the two computer players play against each other without button presses
                 self.play_turn()
+        '''
+    def getReward(self, nextState)->float:
+        ### Osher: check
+        if self.board.winner == "X":
+            return 1000.0
+        elif self.board.winner == "O":
+            return -1000.0
+        else:
+            return 0.0
 
     def play_turn(self):
-        move = self.current_player.get_move(self.board)
-        self.handle_move(move)
+        ''' X moves, Y moves and then update (learn)'''
+        state = copy.deepcopy(self.board)
+        X_move = self.player1.get_move(self.board)
+        self.handle_move(X_move)
+        reward = self.getRewards(self.board)
+        O_move = self.player2.get_move(self.board)
+        self.handle_move(O_move)
+        next_state = self.board
+        self.player1.qLearningAgent.update(state, X_move, next_state, reward)
 
+    '''
     def learn_Q(self, move):                        # If Q-learning is toggled on, "learn_Q" should be called after receiving a move from an instance of Player and before implementing the move (using Board's "place_mark" method)
         state_key = QPlayer.make_and_maybe_add_key(self.board, self.current_player.mark, self.Q)
         next_board = self.board.get_next_board(move, self.current_player.mark)
@@ -151,7 +172,7 @@ class Game:
                 expected = reward + (self.gamma * max(next_Qs.values()))        # If the current player is O, the next player is X, and the move with the maximum Q vlue should be chosen
         change = self.alpha * (expected - self.Q[state_key][move])
         self.Q[state_key][move] += change
-
+    '''
 
 class Board:
     def __init__(self, board_size=3, streak_size=3):
@@ -190,7 +211,6 @@ class Board:
                         col.append(board_mat[i + k, j])
                     board_cols.append(col)
 
-
         # diagonals
         board_diag = []
         board_cross_diag = []
@@ -225,9 +245,10 @@ class Board:
     def available_moves(self):
         return [(i,j) for i in range(self.board_size) for j in range(self.board_size) if np.isnan(self.grid[i][j])]
 
+
     @staticmethod
     def available_moves_static(board):
-        # Returns a list of INDICES
+        # Returns a list of INDICES (i,j)
         return [(i, j) for i in range(board.board_size) for j in range(board.board_size) if np.isnan(board.grid[i][j])]
 
     def get_next_board(self, move, mark):
@@ -302,20 +323,30 @@ class THandPlayer(ComputerPlayer):
 
 
 class QPlayer(ComputerPlayer):
-    def __init__(self, mark, Q={}, epsilon=0.0, discount=0.9, learningRate=0.8):
+    def __init__(self, mark='X', Q={}, epsilon=0.0, discount=0.9, learningRate=0.8):
         super(QPlayer, self).__init__(mark=mark)
         self.Q = Q
-        self.epsilon = 0.0 #epsilon
+        self.epsilon = 0.0 ###epsilon - change later from hardcoding the value
         ### Osher: Board.available_moves() might not be a pointer to a function
-        actionFn = lambda board: board.available_moves()
+        actionFn = lambda state: Board.available_moves_static(state) ###lambda board: board.available_moves()
         self.agentOpts = {'actionFn': actionFn, 'epsilon': epsilon, \
                                       'gamma': discount, 'alpha': learningRate}
-        qLearnAgent = ApproximateQAgent(exctractor=FeatureExtractor(),**self.opts)
+        qLearningAgent = ApproximateQAgent(exctractor=FeatureExtractor(),**self.opts)
 
     def get_move(self, board):
+        action = self.qLearningAgent(board)
+        return action
+
+
+        '''
         if np.random.uniform() < self.epsilon:              # With probability epsilon, choose a move at random ("epsilon-greedy" exploration)
             return RandomPlayer.get_move(board)
         else:
+
+
+
+
+            
             state_key = QPlayer.make_and_maybe_add_key(board, self.mark, self.Q)
             Qs = self.Q[state_key]
 
@@ -342,3 +373,4 @@ class QPlayer(ComputerPlayer):
         else:
             move = min_or_max(Qs, key=Qs.get)
         return move
+    '''

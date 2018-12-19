@@ -24,6 +24,12 @@ class FeatureExtractor:
 
     '''Input: board is the current board state from which we extract features'''
     def extractFeatures(self, board:Board, index, player="X"):
+        """
+        :param board: the state
+        :param index: the action (next move)
+        :param player:
+        :return:
+        """
         N = board.board_size
         board_mat = board.grid
 
