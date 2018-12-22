@@ -1,5 +1,5 @@
 import random,util,time
-from FeatureExtractor import *
+#from FeatureExtractor import *
 
 """Agent class was copied from game.py"""
 class Agent:
@@ -332,7 +332,7 @@ class ApproximateQAgent(TicTacToeQAgent):
         #self.featExtractor = util.lookup(extractor, globals())()
         self.featExtractor = extractor
         TicTacToeQAgent.__init__(self, **args)
-        self.weights = util.Counter()
+        self.weights = util.Counter() #Uniform weights
         self.weight = 0
 
     def getWeights(self):
@@ -355,8 +355,8 @@ class ApproximateQAgent(TicTacToeQAgent):
         """
            Should update your weights based on transition
         """
-        features = self.featExtractor.getFeatures(state, action)
-        features_list = features.sortedKeys()
+        features = self.featExtractor.extractFeatures(state, action)
+        ###features_list = features.sortedKeys()
         counter = 0
         for feature in features:
             difference = 0
@@ -366,6 +366,7 @@ class ApproximateQAgent(TicTacToeQAgent):
                 difference = (reward + self.discount * max([self.getQValue(nextState, nextAction) for nextAction in self.getLegalActions(nextState)])) - self.getQValue(state, action)
             self.weights[feature] = self.weights[feature] + self.alpha * difference * features[feature]
             counter += 1
+            #print(self.weights)
 
     def final(self, state):
         "Called at the end of each game."

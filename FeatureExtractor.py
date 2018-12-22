@@ -421,5 +421,4 @@ class FeatureExtractor:
             "interaction": 0.0,
             "blocking": 0.0
         }
-
         return square_dict
