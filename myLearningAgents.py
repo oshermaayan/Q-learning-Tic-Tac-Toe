@@ -1,4 +1,5 @@
 import random,util,time
+import numpy as np
 #from FeatureExtractor import *
 
 """Agent class was copied from game.py"""
@@ -314,8 +315,7 @@ class TicTacToeQAgent(QLearningAgent):
         informs parent of action for Pacman.  Do not change or remove this
         method.
         """
-        action = QLearningAgent.getAction(self,state) # action = indices
-        ###self.doAction(state,action)
+        action = QLearningAgent.getAction(self,state) #action = indices
         return action
 
 
@@ -345,10 +345,8 @@ class ApproximateQAgent(TicTacToeQAgent):
         """
         q_value = 0
         features = self.featExtractor.extractFeatures(board, action)
-        counter = 0
         for feature in features:
             q_value += features[feature] * self.weights[feature]
-            counter += 1
         return q_value
 
     def update(self, state, action, nextState, reward):
@@ -356,14 +354,23 @@ class ApproximateQAgent(TicTacToeQAgent):
            Should update your weights based on transition
         """
         features = self.featExtractor.extractFeatures(state, action)
-        ###features_list = features.sortedKeys()
+
+        #difference = 0
+        if len(self.getLegalActions(nextState)) == 0:
+            # print(reward)
+            difference = reward - self.getQValue(state, action)
+        else:
+            difference = (reward + self.discount * max([self.getQValue(nextState, nextAction) for nextAction in
+                                                        self.getLegalActions(nextState)])) - self.getQValue(state,
+                                                                                                            action)
+        ###print(difference)
+        ###difference = np.clip(difference,-1,1)
+
         counter = 0
-        for feature in features:
-            difference = 0
-            if len(self.getLegalActions(nextState)) == 0:
-                difference = reward - self.getQValue(state, action)
-            else:
-                difference = (reward + self.discount * max([self.getQValue(nextState, nextAction) for nextAction in self.getLegalActions(nextState)])) - self.getQValue(state, action)
+        # Todo: consider moving the diff calculation outside of the loop
+        # TODO: Probably not a good idea (weird results) - perhaps due to the fact we use
+        # the updated weights in next feature iteration?
+        for feature in sorted(features):
             self.weights[feature] = self.weights[feature] + self.alpha * difference * features[feature]
             counter += 1
             #print(self.weights)

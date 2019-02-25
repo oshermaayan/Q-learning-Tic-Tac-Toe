@@ -8,6 +8,7 @@ from myLearningAgents import *
 import pickle as pickle    # cPickle is for Python 2.x only; in Python 3, simply "import pickle" and the accelerated version will be used automatically if available
 import math
 from numpy.core.multiarray import ndarray
+import csv
 
 
 class Game:
@@ -41,6 +42,16 @@ class Game:
             self.alpha = alpha          # Learning rate
             self.gamma = gamma          # Discount rate
             self.share_Q_with_players()
+
+        self.log_path = "weights_log_boardSize_{boardSize}_streakSize{streak}.csv".format\
+                                                                    (boardSize=self.board_size,streak=self.streak_size)
+        self.episode_count = 0
+        '''
+        with open(self.log_path, "r",newline='') as logFile:
+            fieldnames = ['episode', 'density', 'linear', 'nonlinear', 'interaction', 'blocking']
+            logger = csv.DictWriter(logFile, fieldnames=fieldnames)
+            logger.writeheader()
+        '''
 
     @property
     def Q_learn(self):
@@ -101,8 +112,16 @@ class Game:
             print("Cat's game.")
         else:
             print(("The game is over. The player with mark {mark} won!".format(mark=self.current_player.mark)))
-            print(self.board.grid)
-            print("Final weights are: " + str(self.player1.qLearningAgent.getWeights()))
+            ###print(self.board.grid)
+            self.episode_count += 1
+            with open(self.log_path ,"a",newline='') as logFile:
+                fieldnames = ['episode', 'density','linear','nonlinear','interaction','blocking']
+                logger= csv.DictWriter(logFile, fieldnames=fieldnames)
+                row_dict = dict(self.player1.qLearningAgent.getWeights())
+                row_dict['episode'] = self.episode_count
+                logger.writerow(row_dict)
+
+
 
     def reset(self):
         print("Resetting...")
@@ -140,10 +159,10 @@ class Game:
         '''
     def getReward(self, nextState)->float:
         ### Osher: check
-        if self.board.winner() == "X":
-            return 10.0
-        elif self.board.winner() == "O":
-            return -10.0
+        if nextState.winner() == "X":
+            return 1.0
+        elif nextState.winner() == "O":
+            return -1.0
         else:
             return 0.0
 
@@ -155,13 +174,13 @@ class Game:
         state = copy.deepcopy(self.board)
         X_move = self.player1.get_move(self.board)
         self.handle_move(X_move)
-        reward = self.getReward(self.board)
         if not(self.board.over()):
             self.switch_players()
             O_move = self.player2.get_move(self.board)
             self.handle_move(O_move)
             self.switch_players()  # back to X
         next_state = self.board
+        reward = self.getReward(self.board)
         self.player1.qLearningAgent.update(state, X_move, next_state, reward)
 
     '''
@@ -258,7 +277,10 @@ class Board:
     @staticmethod
     def available_moves_static(board):
         # Returns a list of INDICES (i,j)
-        return [(i, j) for i in range(board.board_size) for j in range(board.board_size) if np.isnan(board.grid[i][j])]
+        if board.over():
+            return []
+        else:
+            return [(i, j) for i in range(board.board_size) for j in range(board.board_size) if np.isnan(board.grid[i][j])]
 
     def get_next_board(self, move, mark):
         next_board = copy.deepcopy(self)
@@ -308,7 +330,6 @@ class RandomPlayer(ComputerPlayer):
     def __init__(self,mark):
         super(ComputerPlayer, self).__init__(mark=mark)
 
-
     @staticmethod
     def get_move(board):
         moves = board.available_moves()
@@ -339,7 +360,7 @@ class QPlayer(ComputerPlayer):
     def __init__(self, mark='X', Q={}, epsilon=0.0, discount=0.9, learningRate=0.01):
         super(QPlayer, self).__init__(mark=mark)
         self.Q = Q
-        self.epsilon = 0.0 ###epsilon - change later from hardcoding the value
+        self.epsilon = epsilon ###epsilon - change later from hardcoding the value
         ### Osher: Board.available_moves() might not be a pointer to a function
         actionFn = lambda state: Board.available_moves_static(state) ###lambda board: board.available_moves()
         self.agentOpts = {'actionFn': actionFn, 'epsilon': epsilon, \
@@ -442,8 +463,18 @@ class FeatureExtractor:
         square_features_scores["nonlinear"] = nonlinear
         square_features_scores["interaction"] = interaction
         square_features_scores["blocking"] = blocking
-        ###TODO: delete this line later #print(square_features_scores)
-        return square_features_scores
+
+
+        #todo: remove this variable later
+        stale_features = util.Counter()
+        stale_features["density"] = density_score
+        stale_features["linear"] = linear
+        #stale_features["nonlinear"] = nonlinear ### Worse results than with first two features
+        stale_features["interaction"] = interaction ### Worse results than with first two features
+
+        # TODO: ### CHANGE THIS BACK TO ALL FEATURES!
+        return stale_features
+        #return square_features_scores
 
         #active_squares = []  # Empty squares
         ''' Calculate features for each square in the board'''

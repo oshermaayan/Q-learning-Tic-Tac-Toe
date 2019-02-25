@@ -6,7 +6,7 @@ import copy
 from Q_Learning_Tic_Tac_Toe import Board
 import util
 
-WIN_SCORE = 10
+WIN_SCORE = 1
 INFINITY_O = 100
 INFINITY_X = 100
 
